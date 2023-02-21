@@ -33,7 +33,7 @@ public class WareSkuController {
      * 查询是否有库存
      */
     @PostMapping("/hasStock")
-    public R<List<SkuHasStockVo> > hasStock(@RequestBody List<Long> skuIds) {
+    public R hasStock(@RequestBody List<Long> skuIds) {
         List<SkuHasStockVo> list = wareSkuService.getSkuHasStock(skuIds);
         return R.ok().setData(list);
     }

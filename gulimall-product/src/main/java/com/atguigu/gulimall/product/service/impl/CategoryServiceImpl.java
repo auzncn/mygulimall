@@ -1,5 +1,7 @@
 package com.atguigu.gulimall.product.service.impl;
 
+import com.atguigu.gulimall.product.vo.Category2VO;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -53,6 +55,42 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
         getParentsPath(catelogId, list);
         Collections.reverse(list);
         return list;
+    }
+
+    @Override
+    public List<CategoryEntity> getLevel1Categorys() {
+        List<CategoryEntity> level1Categorys = this.list(new QueryWrapper<CategoryEntity>()
+                .eq("parent_cid", 0));
+        return level1Categorys;
+    }
+
+    @Override
+    public Map<String, List<Category2VO>> getCatalogJson() {
+        List<CategoryEntity> level1Categorys = getLevel1Categorys();
+        Map<String, List<Category2VO>> map = level1Categorys.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            List<CategoryEntity> level2 = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", v.getCatId()));
+            List<Category2VO> category2VOS = new ArrayList<>();
+            if (CollectionUtils.isNotEmpty(level2)) {
+                category2VOS = level2.stream().map(e -> {
+                    Category2VO category2VO = new Category2VO();
+                    category2VO.setCatalog1Id(v.getCatId().toString());
+                    category2VO.setId(e.getCatId().toString());
+                    category2VO.setName(e.getName());
+                    List<CategoryEntity> level3 = baseMapper.selectList(new QueryWrapper<CategoryEntity>().eq("parent_cid", e.getCatId()));
+                    List<Category2VO.Catalog3VO> collect = level3.stream().map(l3 -> {
+                        Category2VO.Catalog3VO catalog3VO = new Category2VO.Catalog3VO();
+                        catalog3VO.setId(l3.getCatId().toString());
+                        catalog3VO.setCatalog2Id(e.getCatId().toString());
+                        catalog3VO.setName(l3.getName());
+                        return catalog3VO;
+                    }).collect(Collectors.toList());
+                    category2VO.setCatalog3List(collect);
+                    return category2VO;
+                }).collect(Collectors.toList());
+            }
+            return category2VOS;
+        }));
+        return map;
     }
 
     private void getParentsPath(Long catelogId, List<Long> list) {

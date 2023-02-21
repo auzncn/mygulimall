@@ -1,5 +1,6 @@
 package com.atguigu.gulimall.product.service;
 
+import com.atguigu.gulimall.product.vo.Category2VO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.atguigu.common.utils.PageUtils;
 import com.atguigu.gulimall.product.entity.CategoryEntity;
@@ -23,6 +24,11 @@ public interface CategoryService extends IService<CategoryEntity> {
     void batchRemove(List<Long> ids);
 
     List<Long> getPath(Long catelogId);
+
+    List<CategoryEntity> getLevel1Categorys();
+
+    Map<String, List<Category2VO>> getCatalogJson();
+
 
 }
 
