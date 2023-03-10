@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.atguigu.gulimall.product.service.CategoryBrandRelationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -71,6 +72,7 @@ public class CategoryController {
      * 批量修改
      */
     @RequestMapping("/update/batch")
+    @CacheEvict(value = "category",allEntries = true)
     public R updateBatch(@RequestBody List<CategoryEntity> category) {
         categoryService.updateBatchById(category);
         return R.ok();
@@ -81,6 +83,7 @@ public class CategoryController {
      */
     @RequestMapping("/update")
     @Transactional
+    @CacheEvict(value = "category",allEntries = true)
     public R update(@RequestBody CategoryEntity category) {
         categoryService.updateById(category);
         categoryBrandRelationService.updateCategory(category.getCatId(),category.getName());

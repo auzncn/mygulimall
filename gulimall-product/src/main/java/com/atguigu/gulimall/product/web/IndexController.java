@@ -18,7 +18,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Controller
-//@RequestMapping("product/attr")
 public class IndexController {
     @Resource
     CategoryService categoryService;

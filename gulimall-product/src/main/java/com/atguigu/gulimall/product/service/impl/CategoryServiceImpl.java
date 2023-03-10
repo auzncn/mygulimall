@@ -9,6 +9,7 @@ import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -76,7 +77,9 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
     }
 
     @Override
+    @Cacheable(value = "category", key = "#root.methodName")
     public List<CategoryEntity> getLevel1Categorys() {
+        System.out.println("查询数据库获取1级分类。。。。。。。。。。。。。");
         List<CategoryEntity> level1Categorys = this.list(new QueryWrapper<CategoryEntity>()
                 .eq("parent_cid", 0));
         return level1Categorys;
@@ -169,16 +172,50 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryDao, CategoryEntity
 
 
     @Override
+    @Cacheable(value = "category",key = "#root.methodName")
     public Map<String, List<Category2VO>> getCatalogJson() {
-        String catalogJson = stringRedisTemplate.opsForValue().get("catalogJson");
-        if (StringUtils.isBlank(catalogJson)) {
-            System.out.println("缓存中没有数据，开始查找数据库。。。。。。。。。。。。。。。。。。。");
-            return getCatalogJsonDbRedisLock();
-        }
-        System.out.println("缓存中有数据，直接返回。。。。。。。。。。。。。。。。。。。");
-        return JSON.parseObject(catalogJson, new TypeReference<Map<String, List<Category2VO>>>() {
-        });
+        System.out.println("进入数据库查询。。。。。。。。。。。。。。。。。。。。。。");
+        List<CategoryEntity> selectList = this.list();
+        List<CategoryEntity> level1Categorys1 = getParentCid(selectList, 0L);
+        Map<String, List<Category2VO>> map = level1Categorys1.stream().collect(Collectors.toMap(k -> k.getCatId().toString(), v -> {
+            List<CategoryEntity> level2 = getParentCid(selectList, v.getCatId());
+            List<Category2VO> category2VOS = new ArrayList<>();
+            if (CollectionUtils.isNotEmpty(level2)) {
+                category2VOS = level2.stream().map(e -> {
+                    Category2VO category2VO = new Category2VO();
+                    category2VO.setCatalog1Id(v.getCatId());
+                    category2VO.setId(e.getCatId());
+                    category2VO.setName(e.getName());
+                    List<CategoryEntity> level3 = getParentCid(selectList, e.getCatId());
+                    List<Category2VO.Catalog3VO> collect = level3.stream().map(l3 -> {
+                        Category2VO.Catalog3VO catalog3VO = new Category2VO.Catalog3VO();
+                        catalog3VO.setId(l3.getCatId());
+                        catalog3VO.setCatalog2Id(e.getCatId());
+                        catalog3VO.setName(l3.getName());
+                        return catalog3VO;
+                    }).collect(Collectors.toList());
+                    category2VO.setCatalog3List(collect);
+                    return category2VO;
+                }).collect(Collectors.toList());
+            }
+            return category2VOS;
+        }));
+        ;
+        return map;
     }
+
+
+//    @Override
+//    public Map<String, List<Category2VO>> getCatalogJson() {
+//        String catalogJson = stringRedisTemplate.opsForValue().get("catalogJson");
+//        if (StringUtils.isBlank(catalogJson)) {
+//            System.out.println("缓存中没有数据，开始查找数据库。。。。。。。。。。。。。。。。。。。");
+//            return getCatalogJsonDbRedisLock();
+//        }
+//        System.out.println("缓存中有数据，直接返回。。。。。。。。。。。。。。。。。。。");
+//        return JSON.parseObject(catalogJson, new TypeReference<Map<String, List<Category2VO>>>() {
+//        });
+//    }
 
     private List<CategoryEntity> getParentCid(List<CategoryEntity> list, Long parentCid) {
         return list.stream().filter(e -> e.getParentCid().equals(parentCid)).collect(Collectors.toList());
